@@ -66,7 +66,7 @@ def get_recommender(books_data, book_embeddings):
     if cached:
         return cached
 
-    cache = AvailabilityCache(redis_host="redis://red-d6keeht6ubrc73edn16g", redis_port=6379)
+    cache = AvailabilityCache(redis_host="redis://red-d9jrrm0u01pc739o6qsg", redis_port=6379)
     availability_service = AvailabilityService(cache)
     recommender = HybridRecommender(book_embeddings, books_data)
     context_recommender = ContextAwareRecommender(
