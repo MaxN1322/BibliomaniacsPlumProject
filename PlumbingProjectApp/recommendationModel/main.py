@@ -5,7 +5,7 @@ from evaluation import RecommenderEvaluator
 from housedBooks.modelIncorp import (AvailabilityCache, AvailabilityService, ContextAwareRecommender)
 
 cache = AvailabilityCache(
-    redis_host="redis://red-d6keeht6ubrc73edn16g",
+    redis_host="redis://red-d9jrrm0u01pc739o6qsg",
     redis_port=6379,
 )
 
