@@ -1141,6 +1141,14 @@ def submit_review():
             "error": "Daily limit reached",
             "message": "You can only submit 2 reviews per day. Please try again tomorrow."
         }), 429  # 429 Too Many Requests
+
+    if is_duplicate_review(user_email, data["book_title"], data["author"], data["review"]):
+        remaining = 2 - daily_count
+        return jsonify({
+            "message": "Duplicate review",
+            "daily_reviews_submitted": daily_count,
+            "daily_reviews_remaining": remaining
+        }), 201
     
     if "recommended_audience_grade" in data:
         if not isinstance(data["recommended_audience_grade"], list):
@@ -1167,6 +1175,17 @@ def submit_review():
         }), 201
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+
+def is_duplicate_review(email, book_title, author, review_text):
+    existing = Review.collection.filter('email', '==', email).fetch()
+    for r in existing:
+        if (r["book_title"].strip().lower() == book_title.strip().lower()
+                and r["author"].strip().lower() == author.strip().lower()
+                and r["review"].strip().lower() == review_text.strip().lower()):
+            return True
+    return False
+
 
 @app.route("/bulk_import_reviews", methods=["POST"])
 def bulk_import_reviews():

@@ -368,6 +368,8 @@ export default function MyReviews() {
         setEditingReviewId(null);
         alert(isEditMode ? "Review updated!" : "Review submitted!");
         await fetchUserReviews(user);
+      } else if (result.message === "Duplicate review") {
+        console.log("duplicate");
       } else if (response.status === 429) {
         alert(result.message || "You've reached your daily limit of 2 reviews. Please try again tomorrow!");
       } else {
