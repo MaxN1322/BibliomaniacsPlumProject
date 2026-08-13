@@ -336,7 +336,18 @@ export default function MyReviews() {
 
       const result = await response.json();
 
-      if (response.ok) {
+      if (response.ok && result.message === "Duplicate review") {
+        console.log("duplicate");
+        // update counts, close modal, but no alert / no admin notify
+        if (result.daily_reviews_remaining !== undefined) {
+          setDailyReviewsRemaining(result.daily_reviews_remaining);
+          setDailyReviewsSubmitted(result.daily_reviews_submitted);
+        }
+        setModalVisible(false);
+        setIsEditMode(false);
+        setEditingReviewId(null);
+        await fetchUserReviews(user);
+      } else if (response.ok) {
         console.log("Success:", result);
 
         // Update daily counts from response if provided

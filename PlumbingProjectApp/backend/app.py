@@ -1180,9 +1180,9 @@ def submit_review():
 def is_duplicate_review(email, book_title, author, review_text):
     existing = Review.collection.filter('email', '==', email).fetch()
     for r in existing:
-        if (r["book_title"].strip().lower() == book_title.strip().lower()
-                and r["author"].strip().lower() == author.strip().lower()
-                and r["review"].strip().lower() == review_text.strip().lower()):
+        if (r.book_title.strip().lower() == book_title.strip().lower()
+                and r.author.strip().lower() == author.strip().lower()
+                and r.review.strip().lower() == review_text.strip().lower()):
             return True
     return False
 
