@@ -321,9 +321,7 @@ export default function LandingPage() {
               <Text className="landingTitle">Welcome Back!</Text>
 
               <Text className="landingTagline pt-2 pb-8">
-                Book review website that enhances Ridgewood Public Library’s
-                volunteer review service by streamlining personal information
-                entry, organizing hours, and providing recommendations.
+       
               </Text>
 
               <Pressable

@@ -206,9 +206,6 @@ export default function LandingPage() {
               <Text className="landingTitle">Bibliomaniacs</Text>
 
               <Text className="landingTagline">
-                Book review website that enhances Ridgewood Public Library’s volunteer review
-                service by streamlining personal information entry, organizing hours, and
-                providing recommendations.
               </Text>
 
               <View className="landingBullets">
