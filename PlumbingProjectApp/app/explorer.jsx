@@ -177,7 +177,7 @@ export default function AllReviews() {
 
       const data = await res.json();
 
-      const approvedData = data.filter((r) => r.status === "approved");
+      const approvedData = data.filter((r) => r.approved === true);
 
       setReviews(approvedData);
 
