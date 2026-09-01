@@ -177,10 +177,12 @@ export default function AllReviews() {
 
       const data = await res.json();
 
-      setReviews(data);
+      const approvedData = data.filter((r) => r.status === "approved");
+
+      setReviews(approvedData);
 
       const initialMap = {};
-      data.forEach(r => {
+      approvedData.forEach(r => {
         if (r?.genres?.length) {
           initialMap[r.id] = r.genres;
         }
