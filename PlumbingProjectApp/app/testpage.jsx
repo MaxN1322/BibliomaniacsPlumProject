@@ -13,11 +13,11 @@ export default function TestPage() {
       }}
     >
       <Text style={{ fontSize: 32, fontWeight: "bold" }}>
-        My Test Page!
+        Max's Test Page:
       </Text>
 
       <Text style={{ fontSize: 16, marginTop: 12 }}>
-        Successfully deployed with Vercel.
+        Hi Gabe
       </Text>
     </View>
   );
