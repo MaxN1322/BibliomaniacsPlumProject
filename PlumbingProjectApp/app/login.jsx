@@ -13,7 +13,7 @@ import { useRouter } from "expo-router";
 import axios from "axios";
 import { auth, app } from "../backend/firebaseConfig";
 
-const db = getFirestore(app);
+const db = app ? getFirestore(app) : null;
 
 export default function Login() {
   const router = useRouter();
@@ -21,6 +21,11 @@ export default function Login() {
   const [role, setRole] = useState(null);
 
   useEffect(() => {
+    if (!auth) {
+      setCurrentUser(null);
+      setRole(null);
+      return;
+    }
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         setCurrentUser(user);
@@ -41,6 +46,10 @@ export default function Login() {
   }, []);
 
   const handleGoogleSignIn = async () => {
+    if (!auth || !app || !db) {
+      Alert.alert("Sign in unavailable", "Firebase is not configured for this build.");
+      return;
+    }
     try {
       const provider = new GoogleAuthProvider();
       const result = await signInWithPopup(auth, provider);

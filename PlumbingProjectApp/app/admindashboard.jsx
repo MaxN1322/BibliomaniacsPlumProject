@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { Users, Book, FileText, Plus, X, Calendar, ExternalLink, Loader } from "lucide-react";
-import { getAuth } from "firebase/auth"; // Import Firebase auth
 import { View, Text, ScrollView } from "react-native";
 import { RequireAccess } from "../components/requireaccess";
 import { getFirestore, doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
@@ -51,7 +50,11 @@ const [reviewStats, setReviewStats] = useState({
 
   // Wait for auth to be ready
   useEffect(() => {
-    const auth = getAuth();
+    if (!auth) {
+      setAuthReady(false);
+      setLoadingAdmins(false);
+      return;
+    }
     
     const unsubscribe = auth.onAuthStateChanged((user) => {
       if (user) {
@@ -73,7 +76,7 @@ const [reviewStats, setReviewStats] = useState({
   }, [authReady]);
 
   useEffect(() => {
-    const auth = getAuth();
+    if (!auth || !app) return;
     const user = auth.currentUser;
 
     const unsubscribe = auth.onAuthStateChanged(async (user) => {
