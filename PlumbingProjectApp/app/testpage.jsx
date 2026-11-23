@@ -19,6 +19,8 @@ export default function TestPage() {
       <Text style={{ fontSize: 16, marginTop: 12 }}>
         Hi Gabe
       </Text>
+
+      
     </View>
   );
 }
