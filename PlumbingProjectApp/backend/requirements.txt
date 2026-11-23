@@ -17,6 +17,7 @@ pandas
 scipy
 matplotlib
 reportlab
+pdfplumber
 better-profanity
 requests
 httpx

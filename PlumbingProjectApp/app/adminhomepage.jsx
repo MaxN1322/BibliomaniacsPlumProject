@@ -4,7 +4,6 @@ import { useRouter } from "expo-router";
 import { RequireAccess } from "../components/requireaccess";
 import { useState, useEffect } from "react";
 import { auth, app } from "../firebaseConfig";
-import { getAuth } from "firebase/auth";
 
 export default function AdminHomePage() {
   const router = useRouter();
@@ -53,8 +52,10 @@ export default function AdminHomePage() {
   });
 
   useEffect(() => {
-    const auth = getAuth();
-    auth.currentUser;
+    if (!auth) {
+      setAuthReady(false);
+      return;
+    }
     
     const unsubscribe = auth.onAuthStateChanged((user) => {
       if (user) {
@@ -69,9 +70,7 @@ export default function AdminHomePage() {
   }, []);
 
   useEffect(() => {
-    const auth = getAuth();
-
-    if (authReady) {
+    if (auth && authReady) {
       fetchBookOfWeek();
     }
   }, [authReady]);

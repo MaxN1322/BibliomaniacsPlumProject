@@ -16,7 +16,7 @@ export default function Layout() {
   const router = useRouter();
   const [role, setRole] = useState(null);
 
-  const db = getFirestore(app);
+  const db = app ? getFirestore(app) : null;
   const [currentUser, setCurrentUser] = useState(null);
 
   // Map a route to a simple page name  
@@ -32,6 +32,7 @@ export default function Layout() {
     if (pathname.startsWith("/adminhomepage")) return "adminhomepage";
     if (pathname.startsWith("/login")) return "login";
     if (pathname.startsWith("/certificate")) return "certificate";
+    if (pathname.startsWith("/book-import")) return "book-import";
 
     return "";
   }
@@ -60,6 +61,11 @@ export default function Layout() {
   };
 
   const handleLogout = async () => {
+    if (!auth) {
+      setRole("no account");
+      setCurrentUser(null);
+      return;
+    }
     try {
       await signOut(auth);
       setCurrentUser(null);
@@ -100,6 +106,10 @@ export default function Layout() {
 
   const fetchNotifications = async () => {
     try {
+      if (!auth || !app) {
+        setNotifications([]);
+        return;
+      }
       const user = auth.currentUser;
       if (!user) {
         setNotifications([]);
@@ -136,6 +146,10 @@ export default function Layout() {
 
   const fetchRole = async () => {
     try {
+      if (!auth) {
+        setRole("no account");
+        return;
+      }
       const user = auth.currentUser;
       if (!user) {
         setRole("no account"); // TEMP FIX
@@ -171,6 +185,10 @@ export default function Layout() {
   };
 
   const handleGoogleSignIn = async () => {
+    if (!auth || !app || !db) {
+      Alert.alert("Sign in unavailable", "Firebase is not configured for this build.");
+      return;
+    }
     try {
       const provider = new GoogleAuthProvider();
       const result = await signInWithPopup(auth, provider);
@@ -243,7 +261,12 @@ export default function Layout() {
     );
   }
 
-  useEffect(() => {    
+  useEffect(() => {
+    if (!auth) {
+      setCurrentUser(null);
+      setRole("no account");
+      return;
+    }
     const unsubscribe = auth.onAuthStateChanged((user) => {
       fetchRole();
     });
@@ -443,6 +466,8 @@ export default function Layout() {
         {/* Navigation Group */}
         {/* homepage, explorer, myreviews, reviewpage, profile, admin-reviews, admindashboard, adminhomepage */}
         <View className="mt-4 space-y-1">
+          <NavItem icon="cloud-upload-outline" IconSet={Ionicons} label="Import Book List" page="book-import" href="/book-import" />
+
           {role === "no account" && (
             <>
               <NavItem icon="home-outline" IconSet={Ionicons} label="Landing Page" page="landingpage" href="/landingpage" />

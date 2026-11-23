@@ -10,6 +10,12 @@ export default function Index() {
   const [loading, setLoading] = useState(true);  // overall loading flag
 
   useEffect(() => {
+    if (!auth) {
+      setUser(null);
+      setRole(null);
+      setLoading(false);
+      return;
+    }
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       try {
         if (!firebaseUser) {

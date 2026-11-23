@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Link, useRouter } from "expo-router";
 import { View, Text, TextInput, Pressable, FlatList, StyleSheet, ScrollView, Alert, Dimensions, ImageBackground } from "react-native";
 import { initializeApp } from "firebase/app";
-import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut, } from "firebase/auth";
+import { signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut, } from "firebase/auth";
 import Carousel from "react-native-reanimated-carousel";
 import { getFirestore, doc, getDoc, setDoc } from "firebase/firestore";
 import { interpolate, interpolateColor } from 'react-native-reanimated';
@@ -12,7 +12,7 @@ import { RequireAccess } from "../components/requireaccess";
 
 export default function LandingPage() {
   const router = useRouter();
-  const db = getFirestore(app);
+  const db = app ? getFirestore(app) : null;
   const { width } = Dimensions.get("window");
   const CARD_WIDTH = Math.min(width * 0.7, 340);
 
@@ -117,6 +117,10 @@ export default function LandingPage() {
   };
 
   const handleGoogleSignIn = async () => {
+    if (!auth || !app || !db) {
+      Alert.alert("Sign in unavailable", "Firebase is not configured for this build.");
+      return;
+    }
     try {
       const provider = new GoogleAuthProvider();
       const result = await signInWithPopup(auth, provider);
@@ -157,8 +161,10 @@ export default function LandingPage() {
   }
 
   useEffect(() => {
-    const auth = getAuth();
-    
+    if (!auth) {
+      setAuthReady(true);
+      return;
+    }
     const unsubscribe = auth.onAuthStateChanged((user) => {
       setAuthReady(true);
     });
@@ -167,8 +173,6 @@ export default function LandingPage() {
   }, []);
 
   useEffect(() => {
-    const auth = getAuth();
-
     if (authReady) {
       fetchBookOfWeek();
     }
