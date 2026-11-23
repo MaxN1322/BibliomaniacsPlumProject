@@ -42,7 +42,7 @@ yarn-error.*
 /ios
 /android
 
-/serviceKey.json
+/serviceKey*.json
 /.env
 
 /Lib

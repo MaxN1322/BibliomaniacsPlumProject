@@ -1,3 +1,5 @@
+from pathlib import Path
+import requests
 from flask import Flask, request, jsonify, send_file
 import os
 import sqlite3
@@ -48,6 +50,13 @@ from genre_images import get_genre_image
 import pickle
 import base64
 # from data_loader import get_books, get_recommender_instance
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+PARSEHUB_API_KEY = os.getenv("PARSEHUB_API_KEY")
+PARSEHUB_PROJECT_TOKEN = os.getenv("PARSEHUB_PROJECT_TOKEN")
 
 app = Flask(__name__)
 CORS(app, origins="*")
@@ -572,6 +581,33 @@ def notify_all_route():
         print(traceback.format_exc())
         return jsonify({"error": str(e), "trace": traceback.format_exc()}), 500
     
+@app.route("/")
+def home():
+    return "Bibliomaniacs Flask backend is running!"
+
+@app.route("/get_parsehub_reviews", methods=["GET"])
+def get_parsehub_reviews():
+    try:
+        reviews_ref = db.collection("reviews")
+        reviews = reviews_ref.stream()
+
+        review_list = []
+
+        for review in reviews:
+            review_data = review.to_dict()
+
+            review_list.append({
+                "id": review.id,
+                "name": review_data.get("name", "")
+            })
+
+        return jsonify({
+            "reviews": review_list
+        }), 200
+
+    except Exception as e:
+        print(f"Error retrieving reviews: {e}")
+        return jsonify({"error": "Could not retrieve reviews"}), 500
 
 @app.route("/notify_recipients", methods=["POST"])
 def notify_recipients_route():
@@ -954,6 +990,55 @@ def add_book():
     
     set_cache("books", None, ttl=1)
     return jsonify({"message": "Book added", "id": saved_book.id}), 200
+
+@app.route("/sync_parsehub", methods=["POST"])
+def sync_parsehub():
+
+    # ParseHub credentials
+    api_key = os.getenv("PARSEHUB_API_KEY")
+    project_token = os.getenv("PARSEHUB_PROJECT_TOKEN")
+
+    # Get scraped data from ParseHub
+    url = f"https://www.parsehub.com/api/v2/projects/{project_token}/last_ready_run/data"
+
+    response = requests.get(
+        url,
+        params={"api_key": api_key}
+    )
+
+    if response.status_code != 200:
+        return jsonify({
+            "error": "Could not retrieve ParseHub data",
+            "status_code": response.status_code,
+            "details": response.text
+        }), 500
+    scraped_books = response.json()
+
+    # Save each book to Firestore
+# Get reviews from ParseHub
+    scraped_reviews = scraped_books.get("Review", [])
+
+    # Save each review to Firestore
+    saved_count = 0
+
+    for review in scraped_reviews:
+
+        review_text = review.get("name", "")
+
+        if not review_text:
+            continue
+
+        db.collection("reviews").add({
+            "name": review_text,
+            "source": "ParseHub"
+        })
+
+        saved_count += 1
+
+    return jsonify({
+        "message": "Reviews imported successfully",
+        "count": saved_count
+    }), 200
 
 @app.route("/get_books", methods=["GET"])
 def get_books():
