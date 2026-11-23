@@ -2,7 +2,9 @@ import { useState } from "react";
 import { View, Text, Pressable, ActivityIndicator, ScrollView } from "react-native";
 import BookImport from "./book-import";
 
-const BACKEND_URL = "https://bibliomaniacsplumproject.onrender.com";
+const BACKEND_URL = (
+  process.env.EXPO_PUBLIC_API_URL || "http://127.0.0.1:5001"
+).trim().replace(/\/+$/, "");
 
 export default function TestPage() {
   const [result, setResult] = useState(null);

@@ -1,8 +1,11 @@
-from flask import Flask, request, jsonify, send_file
 import os
+
+os.environ.setdefault("GRPC_DNS_RESOLVER", "native")
+
+from pathlib import Path
+from flask import Flask, request, jsonify, send_file
 import sqlite3
 import sys
-from pathlib import Path
 from uuid import uuid4
 from dotenv import load_dotenv
 
@@ -48,7 +51,6 @@ from genre_images import get_genre_image
 import pickle
 import base64
 # from data_loader import get_books, get_recommender_instance
-
 app = Flask(__name__)
 CORS(app, origins="*")
 
@@ -63,25 +65,13 @@ app.config["MAX_CONTENT_LENGTH"] = 16 * 1024 * 1024
 
 service_key_json = os.environ.get("FIREBASE_SERVICE_KEY", "").strip()
 db = None
+books_db_path = Path(
+    os.environ.get("BOOKS_DB_PATH")
+    or Path(__file__).resolve().parent / "books.db"
+)
 
-if service_key_json:
-    # FireORM's existing connection below reads a credential file, so keep its
-    # expected file in the backend directory when credentials come from .env.
-    service_key_path = Path(__file__).resolve().parent / "serviceKey.json"
-    service_key_path.write_text(service_key_json, encoding="utf-8")
-    try:
-        firebase_admin.get_app()
-    except ValueError:
-        cred = credentials.Certificate(str(service_key_path))
-        firebase_admin.initialize_app(cred)
 
-    connection(from_file=str(service_key_path))
-    db = firestore.client()
-else:
-    books_db_path = Path(
-        os.environ.get("BOOKS_DB_PATH")
-        or Path(__file__).resolve().parent / "books.db"
-    )
+def initialize_local_books_database():
     books_db_path.parent.mkdir(parents=True, exist_ok=True)
     with sqlite3.connect(books_db_path) as sqlite_db:
         sqlite_db.execute(
@@ -92,6 +82,34 @@ else:
                 ridgewood_availability TEXT NOT NULL DEFAULT 'Unchecked'
             )"""
         )
+
+if service_key_json:
+    try:
+        # FireORM's existing connection reads a credential file, so keep its
+        # expected file in the backend directory when configured from .env.
+        service_key_path = Path(__file__).resolve().parent / "serviceKey.json"
+        service_key_path.write_text(service_key_json, encoding="utf-8")
+        try:
+            firebase_admin.get_app()
+        except ValueError:
+            cred = credentials.Certificate(str(service_key_path))
+            firebase_admin.initialize_app(cred)
+
+        connection(from_file=str(service_key_path))
+        db = firestore.client()
+        try:
+            db.collection("books").limit(1).get(timeout=5)
+            print("Firebase: FIREBASE_SERVICE_KEY found; Firestore connection verified.", flush=True)
+        except Exception:
+            print("Firebase: service key found, but the Firestore connection check failed; API requests will report Firestore errors.", flush=True)
+            traceback.print_exc()
+    except Exception as exc:
+        db = None
+        initialize_local_books_database()
+        print(f"Firebase: initialization failed ({type(exc).__name__}: {exc}); falling back to local SQLite at {books_db_path}.", flush=True)
+else:
+    initialize_local_books_database()
+    print(f"Firebase: FIREBASE_SERVICE_KEY is missing or empty; falling back to local SQLite at {books_db_path}.", flush=True)
 
 profanity.load_censor_words()
 
@@ -328,7 +346,7 @@ def upload_book_list_pdf():
             }
             if db is not None:
                 doc_ref = db.collection("books").document()
-                doc_ref.set(book_data)
+                doc_ref.set(book_data, timeout=5)
                 book_id = doc_ref.id
             else:
                 book_id = uuid4().hex
@@ -353,7 +371,7 @@ def list_imported_books():
         if db is not None:
             stored_books = [
                 {"id": doc.id, **(doc.to_dict() or {})}
-                for doc in db.collection("books").stream()
+                for doc in db.collection("books").stream(timeout=5)
             ]
         else:
             with sqlite3.connect(books_db_path) as sqlite_db:

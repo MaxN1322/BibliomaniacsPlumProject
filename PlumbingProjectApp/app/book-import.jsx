@@ -12,6 +12,35 @@ import {
 const API_BASE_URL = (
   process.env.EXPO_PUBLIC_API_URL || "http://127.0.0.1:5001"
 ).trim().replace(/\/+$/, "");
+const REQUEST_TIMEOUT_MS = 15000;
+
+async function fetchJsonWithTimeout(url, options = {}) {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  try {
+    const response = await fetch(url, { ...options, signal: controller.signal });
+    const data = await readJsonResponse(response);
+    return { response, data };
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
+async function readJsonResponse(response) {
+  const body = await response.text();
+  try {
+    return body ? JSON.parse(body) : {};
+  } catch {
+    throw new Error(`Backend returned an unreadable response (${response.status}).`);
+  }
+}
+
+function requestErrorMessage(error) {
+  if (error?.name === "AbortError") {
+    return "The backend did not respond within 15 seconds. Check that it is running and try again.";
+  }
+  return error?.message || "Could not reach the backend. Check your connection and try again.";
+}
 
 const styles = {
   page: { flex: 1, backgroundColor: "#f8fbf7" },
@@ -54,12 +83,11 @@ export default function BookImport({ embedded = false }) {
       const params = new URLSearchParams();
       if (term.trim()) params.set("q", term.trim());
       const suffix = params.toString() ? `?${params.toString()}` : "";
-      const response = await fetch(`${API_BASE_URL}/api/books${suffix}`);
-      const data = await response.json();
+      const { response, data } = await fetchJsonWithTimeout(`${API_BASE_URL}/api/books${suffix}`);
       if (!response.ok) throw new Error(data.error || "Could not load books.");
       setBooks(Array.isArray(data) ? data : []);
     } catch (error) {
-      setListError(`${error.message} Check that the backend is running at ${API_BASE_URL}.`);
+      setListError(`${requestErrorMessage(error)} Backend URL: ${API_BASE_URL}`);
     } finally {
       setLoadingBooks(false);
     }
@@ -83,11 +111,10 @@ export default function BookImport({ embedded = false }) {
     try {
       const formData = new FormData();
       formData.append("file", selectedFile);
-      const response = await fetch(`${API_BASE_URL}/api/books/upload`, {
+      const { response, data } = await fetchJsonWithTimeout(`${API_BASE_URL}/api/books/upload`, {
         method: "POST",
         body: formData,
       });
-      const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Upload failed.");
       const count = data.count ?? data.books?.length ?? 0;
       setUploadStatus(`Upload complete. ${count} book${count === 1 ? "" : "s"} saved.`);
@@ -96,7 +123,7 @@ export default function BookImport({ embedded = false }) {
       await fetchBooks(search);
     } catch (error) {
       setUploadError(true);
-      setUploadStatus(error.message || "Upload failed. Check the backend connection.");
+      setUploadStatus(requestErrorMessage(error));
     } finally {
       setUploading(false);
     }

@@ -8,4 +8,5 @@ __pycache__/
 **/.env
 serviceKey.json
 **/serviceKey.json
+**/serviceKey*.json
 *firebase-adminsdk*.json
