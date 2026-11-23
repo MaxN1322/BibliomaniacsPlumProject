@@ -1,6 +1,5 @@
 import { useState } from "react";
-import { View, Text, Pressable, ActivityIndicator, ScrollView } from "react-native";
-import BookImport from "./book-import";
+import { View, Text, Pressable, ActivityIndicator } from "react-native";
 
 const BACKEND_URL = "https://bibliomaniacsplumproject.onrender.com";
 
@@ -29,10 +28,12 @@ export default function TestPage() {
   };
 
   return (
-    <ScrollView
-      style={{ flex: 1, backgroundColor: "#f5f5f5" }}
-      contentContainerStyle={{ padding: 24 }}
-    >
+    <View style={{
+      flex: 1,
+      padding: 24,
+      backgroundColor: "#f5f5f5",
+      justifyContent: "center",
+    }}>
       <Text style={{ fontSize: 30, fontWeight: "bold" }}>
         Max's Test Page
       </Text>
@@ -67,14 +68,12 @@ export default function TestPage() {
       {loading && <ActivityIndicator style={{ marginTop: 16 }} />}
 
       {result && (
-        <View
-          style={{
-            marginTop: 24,
-            padding: 16,
-            backgroundColor: "white",
-            borderRadius: 8,
-          }}
-        >
+        <View style={{
+          marginTop: 24,
+          padding: 16,
+          backgroundColor: "white",
+          borderRadius: 8,
+        }}>
           <Text style={{ fontSize: 18, fontWeight: "bold" }}>
             Test Results
           </Text>
@@ -98,10 +97,6 @@ export default function TestPage() {
           )}
         </View>
       )}
-
-      <View style={{ marginTop: 32 }}>
-        <BookImport />
-      </View>
-    </ScrollView>
+    </View>
   );
 }
