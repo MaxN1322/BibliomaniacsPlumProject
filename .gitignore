@@ -1,11 +1,1 @@
-.venv/
-.venv-1/
-node_modules/
-__pycache__/
-*.py[cod]
-*.db
-.env
-**/.env
-serviceKey.json
-**/serviceKey.json
-*firebase-adminsdk*.json
+node_modules
