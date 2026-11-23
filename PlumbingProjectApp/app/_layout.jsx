@@ -32,6 +32,7 @@ export default function Layout() {
     if (pathname.startsWith("/adminhomepage")) return "adminhomepage";
     if (pathname.startsWith("/login")) return "login";
     if (pathname.startsWith("/certificate")) return "certificate";
+    if (pathname.startsWith("/book-import")) return "book-import";
 
     return "";
   }
@@ -443,6 +444,8 @@ export default function Layout() {
         {/* Navigation Group */}
         {/* homepage, explorer, myreviews, reviewpage, profile, admin-reviews, admindashboard, adminhomepage */}
         <View className="mt-4 space-y-1">
+          <NavItem icon="cloud-upload-outline" IconSet={Ionicons} label="Import Book List" page="book-import" href="/book-import" />
+
           {role === "no account" && (
             <>
               <NavItem icon="home-outline" IconSet={Ionicons} label="Landing Page" page="landingpage" href="/landingpage" />

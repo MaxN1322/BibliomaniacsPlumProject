@@ -1,4 +1,16 @@
 from flask import Flask, request, jsonify, send_file
+import os
+import sqlite3
+import sys
+from pathlib import Path
+from uuid import uuid4
+from dotenv import load_dotenv
+
+# Support local .env files beside the backend or at the app root, as well as
+# environment variables supplied by Render.
+load_dotenv(Path(__file__).resolve().parent / ".env")
+load_dotenv(Path(__file__).resolve().parents[1] / ".env")
+
 import firebase_admin
 from firebase_admin import credentials, auth, firestore
 from flask_cors import CORS
@@ -22,7 +34,6 @@ from reportlab.pdfgen import canvas as pdf_canvas
 from reportlab.lib.utils import ImageReader
 import io
 import re
-import os
 from email_utils import generate_email_draft, generate_bulk_email_drafts
 from better_profanity import profanity
 import logging
@@ -39,19 +50,48 @@ import base64
 # from data_loader import get_books, get_recommender_instance
 
 app = Flask(__name__)
-CORS(app)
+CORS(app, origins="*")
 
-service_key_json = os.environ.get("FIREBASE_SERVICE_KEY")
+# pdf_extractor.py currently lives at the repository root while this Flask app
+# lives under PlumbingProjectApp/backend.
+REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
+if str(REPOSITORY_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPOSITORY_ROOT))
+from pdf_extractor import extract_books_from_pdf
+
+app.config["MAX_CONTENT_LENGTH"] = 16 * 1024 * 1024
+
+service_key_json = os.environ.get("FIREBASE_SERVICE_KEY", "").strip()
+db = None
 
 if service_key_json:
-    with open("serviceKey.json", "w") as f:
-        f.write(service_key_json)
+    # FireORM's existing connection below reads a credential file, so keep its
+    # expected file in the backend directory when credentials come from .env.
+    service_key_path = Path(__file__).resolve().parent / "serviceKey.json"
+    service_key_path.write_text(service_key_json, encoding="utf-8")
+    try:
+        firebase_admin.get_app()
+    except ValueError:
+        cred = credentials.Certificate(str(service_key_path))
+        firebase_admin.initialize_app(cred)
 
-cred = credentials.Certificate("serviceKey.json")
-firebase_admin.initialize_app(cred)
-
-connection(from_file="serviceKey.json")
-db = firestore.client()
+    connection(from_file=str(service_key_path))
+    db = firestore.client()
+else:
+    books_db_path = Path(
+        os.environ.get("BOOKS_DB_PATH")
+        or Path(__file__).resolve().parent / "books.db"
+    )
+    books_db_path.parent.mkdir(parents=True, exist_ok=True)
+    with sqlite3.connect(books_db_path) as sqlite_db:
+        sqlite_db.execute(
+            """CREATE TABLE IF NOT EXISTS books (
+                id TEXT PRIMARY KEY,
+                title TEXT NOT NULL,
+                author TEXT NOT NULL,
+                ridgewood_availability TEXT NOT NULL DEFAULT 'Unchecked'
+            )"""
+        )
 
 profanity.load_censor_words()
 
@@ -257,6 +297,79 @@ class Book(Model):
     id = IDField()
     title = TextField()
     added_by = TextField()
+
+
+@app.route("/api/books/upload", methods=["POST"])
+def upload_book_list_pdf():
+    uploaded_file = request.files.get("file")
+    if uploaded_file is None or not uploaded_file.filename:
+        return jsonify({"error": "Upload a PDF using the 'file' form field."}), 400
+    if Path(uploaded_file.filename).suffix.lower() != ".pdf":
+        return jsonify({"error": "Only PDF files are accepted."}), 400
+
+    try:
+        extracted_books = extract_books_from_pdf(uploaded_file.stream)
+    except Exception as exc:
+        app.logger.info("Could not extract uploaded PDF: %s", exc)
+        return jsonify({"error": "Could not read the uploaded PDF."}), 400
+
+    saved_books = []
+    try:
+        for extracted in extracted_books:
+            title = str(extracted.get("title", "")).strip()
+            author = str(extracted.get("author", "Unknown")).strip() or "Unknown"
+            if not title:
+                continue
+
+            book_data = {
+                "title": title,
+                "author": author,
+                "ridgewood_availability": "Unchecked",
+            }
+            if db is not None:
+                doc_ref = db.collection("books").document()
+                doc_ref.set(book_data)
+                book_id = doc_ref.id
+            else:
+                book_id = uuid4().hex
+                with sqlite3.connect(books_db_path) as sqlite_db:
+                    sqlite_db.execute(
+                        "INSERT INTO books (id, title, author, ridgewood_availability) VALUES (?, ?, ?, ?)",
+                        (book_id, title, author, book_data["ridgewood_availability"]),
+                    )
+            saved_books.append({"id": book_id, **book_data})
+    except Exception:
+        app.logger.exception("Failed to save extracted books")
+        return jsonify({"error": "Could not save extracted books."}), 500
+
+    return jsonify({"books": saved_books, "count": len(saved_books)}), 201
+
+
+@app.route("/api/books", methods=["GET"])
+def list_imported_books():
+    query = request.args.get("q", "").strip().casefold()
+    try:
+        books = []
+        if db is not None:
+            stored_books = [
+                {"id": doc.id, **(doc.to_dict() or {})}
+                for doc in db.collection("books").stream()
+            ]
+        else:
+            with sqlite3.connect(books_db_path) as sqlite_db:
+                sqlite_db.row_factory = sqlite3.Row
+                stored_books = [dict(row) for row in sqlite_db.execute(
+                    "SELECT id, title, author, ridgewood_availability FROM books ORDER BY rowid DESC"
+                ).fetchall()]
+
+        for book in stored_books:
+            if query and query not in str(book.get("title", "")).casefold() and query not in str(book.get("author", "")).casefold():
+                continue
+            books.append(book)
+        return jsonify(books), 200
+    except Exception:
+        app.logger.exception("Failed to read books from Firestore")
+        return jsonify({"error": "Could not read books."}), 500
 
 def verify_firebase_token(id_token):
     """Verify Firebase ID token"""
@@ -2229,4 +2342,9 @@ def redis_test():
     return jsonify({"redis": "test failed"}), 500
 
 if __name__ == "__main__":
-    app.run(debug=True, port=5001, use_reloader=False)
+    app.run(
+        host="0.0.0.0",
+        port=int(os.environ.get("PORT", 5001)),
+        debug=False,
+        use_reloader=False,
+    )
