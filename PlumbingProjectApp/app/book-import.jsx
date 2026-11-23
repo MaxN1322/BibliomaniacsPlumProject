@@ -36,7 +36,7 @@ const styles = {
   headerCell: { color: "#4e5e52", fontWeight: "700" },
 };
 
-export default function BookImport() {
+export default function BookImport({ embedded = false }) {
   const [selectedFile, setSelectedFile] = useState(null);
   const [fileInputKey, setFileInputKey] = useState(0);
   const [uploading, setUploading] = useState(false);
@@ -102,9 +102,8 @@ export default function BookImport() {
     }
   };
 
-  return (
-    <ScrollView style={styles.page} contentContainerStyle={{ flexGrow: 1 }}>
-      <View style={styles.content}>
+  const content = (
+    <View style={styles.content}>
         <View>
           <Text style={styles.title}>Book List Import</Text>
           <Text style={styles.intro}>
@@ -166,7 +165,6 @@ export default function BookImport() {
           <View style={[styles.row, styles.headerRow]}>
             <Text style={[styles.cell, styles.headerCell]}>Title</Text>
             <Text style={[styles.cell, styles.headerCell]}>Author</Text>
-            <Text style={[styles.cell, styles.headerCell]}>Ridgewood availability</Text>
           </View>
 
           {loadingBooks ? (
@@ -180,12 +178,20 @@ export default function BookImport() {
               <View key={book.id || `${book.title}-${book.author}`} style={styles.row}>
                 <Text style={styles.cell}>{book.title || "Untitled"}</Text>
                 <Text style={styles.cell}>{book.author || "Unknown"}</Text>
-                <Text style={styles.cell}>{book.ridgewood_availability || "Unchecked"}</Text>
               </View>
             ))
           )}
         </View>
-      </View>
+    </View>
+  );
+
+  if (embedded) {
+    return <View style={{ width: "100%", backgroundColor: styles.page.backgroundColor }}>{content}</View>;
+  }
+
+  return (
+    <ScrollView style={styles.page} contentContainerStyle={{ flexGrow: 1 }}>
+      {content}
     </ScrollView>
   );
 }

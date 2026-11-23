@@ -94,8 +94,8 @@ export default function TestPage() {
           )}
         </View>
       )}
+      <BookImport embedded />
       </ScrollView>
-      <BookImport />
     </View>
   );
 }
