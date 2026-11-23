@@ -222,3 +222,92 @@ npx vercel --prod
 Set `EXPO_PUBLIC_API_URL` in Vercel to the Render service origin, with or without a trailing slash, for example `https://your-backend.onrender.com`. The frontend removes trailing slashes and defaults to `http://127.0.0.1:5001` for local development. Rebuild the Vercel deployment after changing this variable.
 
 For the existing Firebase login features in the frontend, also set `EXPO_PUBLIC_FIREBASE_API_KEY`, `EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN`, `EXPO_PUBLIC_FIREBASE_PROJECT_ID`, `EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET`, `EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID`, and `EXPO_PUBLIC_FIREBASE_APP_ID` in Vercel.
+
+## Running the PDF Extractor (pdfplumber) Locally
+
+This workflow starts the Flask backend and Expo web frontend separately. The backend extracts book titles and authors from an uploaded PDF using `pdfplumber`; `samples/sample_books.pdf` is included as a sample upload. The UI is available at `http://localhost:8081/testpage`.
+
+### Prerequisites
+
+- Python 3 (3.9 or newer recommended) and `pip`
+- Node.js and npm
+
+### 1. Install backend dependencies
+
+Run these commands from the repository root.
+
+**Windows (PowerShell):**
+
+```powershell
+py -3 -m venv PlumbingProjectApp\.venv
+.\PlumbingProjectApp\.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+pip install -r PlumbingProjectApp\backend\requirements.txt
+```
+
+If PowerShell blocks virtual-environment activation, allow it for the current terminal with `Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass`, then activate again.
+
+**macOS / Linux:**
+
+```sh
+python3 -m venv PlumbingProjectApp/.venv
+source PlumbingProjectApp/.venv/bin/activate
+python -m pip install --upgrade pip
+pip install -r PlumbingProjectApp/backend/requirements.txt
+```
+
+The backend requirements include `pdfplumber` for PDF extraction, `Flask` and `flask-cors` for the API, `firebase-admin` for Firestore, and `python-dotenv` for loading local environment variables.
+
+### 2. Configure Firebase (optional)
+
+For Firestore persistence, create `PlumbingProjectApp/backend/.env` and put the service-account JSON on one line as the value of `FIREBASE_SERVICE_KEY`:
+
+```dotenv
+FIREBASE_SERVICE_KEY='{"type":"service_account","project_id":"your-project-id", ... }'
+```
+
+Use the complete JSON contents of your Firebase service-account key in place of the shortened example above. Keep this file private; `.env` files and Firebase key files should not be committed. If `FIREBASE_SERVICE_KEY` is unset, the backend falls back to local SQLite, so upload and search work without Firebase credentials. SQLite data is stored locally and is not a substitute for durable cloud persistence.
+
+### 3. Install frontend dependencies
+
+Open a terminal at the repository root and run:
+
+```sh
+cd PlumbingProjectApp
+npm install
+```
+
+### 4. Run the app in two terminals
+
+**Terminal 1 — backend, port 5001:** from the repository root, activate the virtual environment, then start Flask.
+
+Windows (PowerShell):
+
+```powershell
+cd PlumbingProjectApp
+.\.venv\Scripts\Activate.ps1
+python backend/app.py
+```
+
+macOS / Linux:
+
+```sh
+cd PlumbingProjectApp
+source .venv/bin/activate
+python backend/app.py
+```
+
+**Terminal 2 — frontend, port 8081:**
+
+```sh
+cd PlumbingProjectApp
+npm run web
+```
+
+### 5. Test PDF extraction and search
+
+1. Open `http://localhost:8081/testpage` in a browser.
+2. Choose the PDF upload button and select `samples/sample_books.pdf` from the repository root.
+3. Wait for the upload and parsing status to finish. The extracted book titles and authors should appear on the page.
+4. Use the book search field to filter the saved results by title or author. Reload the page to confirm the saved books are fetched again.
+5. With `FIREBASE_SERVICE_KEY` configured, the records are persisted in Firestore. Without it, they are stored in `PlumbingProjectApp/backend/books.db` in local SQLite.
