@@ -4,5 +4,11 @@
       "source": "/(.*)",
       "destination": "/"
     }
+  ],
+  "crons": [
+    {
+      "path": "/api/cron/heartbeat",
+      "schedule": "0 0 * * *"
+    }
   ]
 }

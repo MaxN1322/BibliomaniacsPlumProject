@@ -2211,7 +2211,22 @@ def ping():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+@app.route("/redis-test")
+def redis_test():
+    test_key = "redis_connection_test"
+    test_value = {"message": "Redis is working!"}
 
+    set_cache(test_key, test_value, ttl=60)
+    retrieved_value = get_cache(test_key)
+
+    if retrieved_value == test_value:
+        return jsonify({
+            "redis": "connected",
+            "write": "success",
+            "read": "success"
+        })
+
+    return jsonify({"redis": "test failed"}), 500
 
 if __name__ == "__main__":
     app.run(debug=True, port=5001, use_reloader=False)

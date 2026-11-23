@@ -1,24 +1,102 @@
+import { useState } from "react";
+import { View, Text, Pressable, ActivityIndicator } from "react-native";
 
-import { View, Text } from "react-native";
+const BACKEND_URL = "https://bibliomaniacsplumproject.onrender.com";
 
 export default function TestPage() {
+  const [result, setResult] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  const testRedis = async () => {
+    setLoading(true);
+    setResult(null);
+
+    try {
+      const response = await fetch(`${BACKEND_URL}/redis-test`);
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Redis test failed");
+      }
+
+      setResult(data);
+    } catch (error) {
+      setResult({ error: error.message });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
-    <View
-      style={{
-        flex: 1,
-        justifyContent: "center",
-        alignItems: "center",
-        backgroundColor: "#f5f5f5",
-        padding: 24,
-      }}
-    >
-      <Text style={{ fontSize: 32, fontWeight: "bold" }}>
-        Max's Test Page:
+    <View style={{
+      flex: 1,
+      padding: 24,
+      backgroundColor: "#f5f5f5",
+      justifyContent: "center",
+    }}>
+      <Text style={{ fontSize: 30, fontWeight: "bold" }}>
+        Max's Test Page
       </Text>
 
-      <Text style={{ fontSize: 16, marginTop: 12 }}>
-        Hi Gabe
+      <Text style={{ fontSize: 16, marginVertical: 12 }}>
+        Technology Stack Demonstration
       </Text>
+
+      <Text style={{ fontSize: 22, fontWeight: "bold", marginTop: 24 }}>
+        Redis Implementation
+      </Text>
+
+      <Text style={{ marginVertical: 12 }}>
+        Test whether Redis can store and retrieve cached data.
+      </Text>
+
+      <Pressable
+        onPress={testRedis}
+        disabled={loading}
+        style={{
+          backgroundColor: "#2563eb",
+          padding: 16,
+          borderRadius: 8,
+          alignItems: "center",
+        }}
+      >
+        <Text style={{ color: "white", fontWeight: "bold" }}>
+          {loading ? "Testing..." : "Test Redis Connection"}
+        </Text>
+      </Pressable>
+
+      {loading && <ActivityIndicator style={{ marginTop: 16 }} />}
+
+      {result && (
+        <View style={{
+          marginTop: 24,
+          padding: 16,
+          backgroundColor: "white",
+          borderRadius: 8,
+        }}>
+          <Text style={{ fontSize: 18, fontWeight: "bold" }}>
+            Test Results
+          </Text>
+
+          {result.error ? (
+            <Text style={{ color: "red", marginTop: 8 }}>
+              Error: {result.error}
+            </Text>
+          ) : (
+            <>
+              <Text style={{ marginTop: 8 }}>
+                Redis: {result.redis}
+              </Text>
+              <Text>
+                Write: {result.write}
+              </Text>
+              <Text>
+                Read: {result.read}
+              </Text>
+            </>
+          )}
+        </View>
+      )}
     </View>
   );
 }
