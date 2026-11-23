@@ -40,6 +40,12 @@ export function RequireAccess({
   };
 
   useEffect(() => {
+    if (!auth) {
+      setUser(null);
+      setRole("no account");
+      setLoadingAuth(false);
+      return;
+    }
     const unsubscribe = auth.onAuthStateChanged(async (u) => {
       setUser(u);
       setLoadingAuth(false);
