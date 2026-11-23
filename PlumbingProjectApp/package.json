@@ -1,7 +1,7 @@
 {
   "name": "plumbingproject",
   "version": "1.0.0",
-  "main": "index.js",
+  "main": "expo-router/entry",
   "scripts": {
     "client": "expo start",
     "server": "python3 backend/app.py",
